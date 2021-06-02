@@ -3,13 +3,13 @@ package ru.javawebinar.topjava.util;
 import ru.javawebinar.topjava.model.UserMeal;
 import ru.javawebinar.topjava.model.UserMealWithExcess;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.Month;
 import java.time.chrono.ChronoLocalDateTime;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 public class UserMealsUtil {
     public static void main(String[] args) {
@@ -30,19 +30,28 @@ public class UserMealsUtil {
     }
 
     public static List<UserMealWithExcess> filteredByCycles(List<UserMeal> meals, LocalTime startTime, LocalTime endTime, int caloriesPerDay) {
-        // TODO return filtered list with excess. Implement by cycles
+        Map<LocalDate, Integer> caloriesCountByDay = new HashMap<>();
+        for (UserMeal ml: meals) {
+            caloriesCountByDay.merge(ml.getDateTime().toLocalDate(),ml.getCalories(), Integer::sum);
+        }
+
         List<UserMealWithExcess> res = new ArrayList<>();
 
         for (UserMeal ml:meals) {
             if (ml.getDateTime().compareTo(ChronoLocalDateTime.from(startTime))>=0 && ml.getDateTime().compareTo(ChronoLocalDateTime.from(endTime))<0)
-                res.add(new UserMealWithExcess(ml.getDateTime(),ml.getDescription(),ml.getCalories(), ml.getCalories() > caloriesPerDay));
+                res.add(new UserMealWithExcess(ml.getDateTime(),ml.getDescription(),ml.getCalories(), caloriesCountByDay.get(ml.getDateTime().toLocalDate()) > caloriesPerDay));
         }
         return res;
     }
 
     public static List<UserMealWithExcess> filteredByStreams(List<UserMeal> meals, LocalTime startTime, LocalTime endTime, int caloriesPerDay) {
-        // TODO Implement by streams
-
-        return null;
+        Map<LocalDate, Integer> col = meals.stream().collect(Collectors.toMap(
+                ml -> ml.getDateTime().toLocalDate(),
+                UserMeal::getCalories, Integer::sum
+        ));
+        return meals.stream().
+                filter(ml->ml.getDateTime().compareTo(ChronoLocalDateTime.from(startTime))>=0 && ml.getDateTime().compareTo(ChronoLocalDateTime.from(endTime))<0).
+                map(ml1 -> new UserMealWithExcess(ml1.getDateTime(),ml1.getDescription(),ml1.getCalories(), col.get(ml1.getDateTime().toLocalDate()) > caloriesPerDay)).
+                collect(Collectors.toList());
     }
 }
